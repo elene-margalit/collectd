@@ -110,6 +110,16 @@ distribution_t * distribution_new_custom(size_t no_buckets, double *custom_bucke
     new_distribution->raw_data_sum = 0;
 }
 
+void distribution_update(distribution_t *dist, double gauge) {
+    for(size_t i = 0; i < dist->no_buckets; i++)
+    {
+        if(gauge >= dist->buckets[i].min_boundary && gauge <= dist->buckets[i].max_boundary)
+        {
+            dist->buckets[i].bucket_counter++;
+        }
+    }
+}
+
 double distribution_average(distribution_t *dist) {
     return dist->raw_data_sum / dist->total_scalar_count;
 }
@@ -118,8 +128,9 @@ int distribution_percentile(distribution_t *dist, uint8_t percent) {
 
 }
 
-void distribution_destroy(distribution_t *d) {
-
+void distribution_destroy(distribution_t *dist) {
+    free(dist->buckets);
+    free(dist);
 }
 
 
