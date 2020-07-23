@@ -125,7 +125,18 @@ double distribution_average(distribution_t *dist) {
 }
 
 int distribution_percentile(distribution_t *dist, uint8_t percent) {
-
+    int sum = 0;
+    int bound;
+    double target_amount = (percent * 100) / dist->no_buckets;
+    for(size_t i = 0; i < dist->no_buckets; i++)
+    {
+        sum += dist->buckets[i].bucket_counter;
+        if(sum >= target_amount)
+        {
+            bound = dist->buckets[i].max_boundary;
+        }
+    }
+    return bound;
 }
 
 void distribution_destroy(distribution_t *dist) {
