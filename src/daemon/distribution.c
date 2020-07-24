@@ -10,7 +10,7 @@ struct bucket_s{
 
 struct distribution_s {
      bucket_t *buckets;
-     size_t no_buckets;
+     size_t num_buckets;
      size_t total_scalar_count;
      double raw_data_sum;
 };
@@ -30,17 +30,17 @@ void increment(bucket_t *bucket) {
     bucket->bucket_counter++;
 } 
 
-distribution_t * distribution_new_linear(size_t no_buckets, double size) {
+distribution_t * distribution_new_linear(size_t num_buckets, double size) {
     distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
-    new_distribution->buckets = calloc(no_buckets, sizeof(bucket_t));
+    new_distribution->buckets = calloc(num_buckets, sizeof(bucket_t));
 
-   for(size_t i = 0; i < no_buckets; i++)
+   for(size_t i = 0; i < num_buckets; i++)
     {
         if(i == 0)
         {
             new_distribution->buckets[i] = initialize_bucket(0, size);
         }
-        else if(i < no_buckets - 1)
+        else if(i < num_buckets - 1)
         {
             new_distribution->buckets[i] = initialize_bucket(i * size + 1, i*size + size);
         }
@@ -50,24 +50,24 @@ distribution_t * distribution_new_linear(size_t no_buckets, double size) {
         }
     }
     
-    new_distribution->no_buckets = no_buckets;
+    new_distribution->num_buckets = num_buckets;
     new_distribution->total_scalar_count = 0;
     new_distribution->raw_data_sum = 0;
 }
 
-distribution_t * distribution_new_exponential(size_t no_buckets, double initial_size, double factor) {
+distribution_t * distribution_new_exponential(size_t num_buckets, double initial_size, double factor) {
     distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
-    new_distribution->buckets = calloc(no_buckets, sizeof(bucket_t));
+    new_distribution->buckets = calloc(num_buckets, sizeof(bucket_t));
     double previous_bucket_size;
     double new_max;
 
-    for(int i = 0; i < no_buckets; i++)
+    for(int i = 0; i < num_buckets; i++)
     {
         if(i == 0)
         {
             new_distribution->buckets[i] = initialize_bucket(0, initial_size);
         }
-        else if(i < no_buckets - 1)
+        else if(i < num_buckets - 1)
         {
             previous_bucket_size = new_distribution->buckets[i - 1].max_boundary - new_distribution->buckets[i - 1].min_boundary;
             new_max = new_distribution->buckets[i - 1].max_boundary + previous_bucket_size * factor;
@@ -80,22 +80,22 @@ distribution_t * distribution_new_exponential(size_t no_buckets, double initial_
         
     }
     
-    new_distribution->no_buckets = no_buckets;
+    new_distribution->num_buckets = num_buckets;
     new_distribution->total_scalar_count = 0;
     new_distribution->raw_data_sum = 0;
 }
 
-distribution_t * distribution_new_custom(size_t no_buckets, double *custom_buckets_sizes) {
+distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buckets_sizes) {
     distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
-    new_distribution->buckets = calloc(no_buckets, sizeof(bucket_t));
+    new_distribution->buckets = calloc(num_buckets, sizeof(bucket_t));
 
-    for(size_t i = 0; i < no_buckets; i++)
+    for(size_t i = 0; i < num_buckets; i++)
     {
         if(i == 0)
         {
             new_distribution->buckets[i] = initialize_bucket(0, custom_buckets_sizes[0]);
         }
-        else if(i < no_buckets - 1)
+        else if(i < num_buckets - 1)
         {
             new_distribution->buckets[i] = initialize_bucket(new_distribution->buckets[i - 1].max_boundary + 1, custom_buckets_sizes[i]);
         }
@@ -105,13 +105,13 @@ distribution_t * distribution_new_custom(size_t no_buckets, double *custom_bucke
         }
     }
     
-    new_distribution->no_buckets = no_buckets;
+    new_distribution->num_buckets = num_buckets;
     new_distribution->total_scalar_count = 0;
     new_distribution->raw_data_sum = 0;
 }
 
 void distribution_update(distribution_t *dist, double gauge) {
-    for(size_t i = 0; i < dist->no_buckets; i++)
+    for(size_t i = 0; i < dist->num_buckets; i++)
     {
         if(gauge >= dist->buckets[i].min_boundary && gauge <= dist->buckets[i].max_boundary)
         {
@@ -127,8 +127,8 @@ double distribution_average(distribution_t *dist) {
 int distribution_percentile(distribution_t *dist, uint8_t percent) {
     int sum = 0;
     int bound = 0;
-    double target_amount = (percent * 100) / dist->no_buckets;
-    for(size_t i = 0; i < dist->no_buckets; i++)
+    double target_amount = (percent * 100) / dist->num_buckets;
+    for(size_t i = 0; i < dist->num_buckets; i++)
     {
         sum += dist->buckets[i].bucket_counter;
         if(sum >= target_amount)
