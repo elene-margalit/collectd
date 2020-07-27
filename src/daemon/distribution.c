@@ -34,14 +34,12 @@ distribution_t * distribution_new_linear(size_t num_buckets, double size) {
 
     distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
     if(new_distribution == NULL) {
-        printf("Calloc failed.");
-        exit(1);
+        return NULL;
     }
 
     new_distribution->buckets = calloc(num_buckets, sizeof(bucket_t));
     if(new_distribution->buckets == NULL) {
-        printf("Calloc failed.");
-        exit(1);
+        return NULL;
     }
 
    for(size_t i = 0; i < num_buckets; i++) {
@@ -68,14 +66,12 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
     
     distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
     if(new_distribution == NULL) {
-        printf("Calloc failed.");
-        exit(1);
+        return NULL;
     }
 
     new_distribution->buckets = calloc(num_buckets, sizeof(bucket_t));
     if(new_distribution->buckets == NULL) {
-        printf("Calloc failed.");
-        exit(1);
+        return NULL;
     }
 
     double previous_bucket_size;
@@ -119,14 +115,12 @@ distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buck
 
     distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
     if(new_distribution == NULL) {
-        printf("Calloc failed.");
-        exit(1);
+        return NULL;
     }
 
     new_distribution->buckets = calloc(num_buckets, sizeof(bucket_t));
     if(new_distribution->buckets == NULL) {
-        printf("Calloc failed.");
-        exit(1);
+        return NULL;
     }
 
     for(size_t i = 0; i < num_buckets; i++) {
