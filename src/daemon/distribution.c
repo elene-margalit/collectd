@@ -83,10 +83,10 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
 
     for(size_t i = 0; i < num_buckets; i++){
         if(i == 0) {
-            new_distribution->buckets[i] = initialize_bucket(0, initial_size);
+            new_distribution->buckets[i] = initialize_bucket(0, initial_size - 1);
         }
         else if(i < num_buckets - 1) {
-            previous_bucket_size = new_distribution->buckets[i - 1].max_boundary - new_distribution->buckets[i - 1].min_boundary;
+            previous_bucket_size = new_distribution->buckets[i - 1].max_boundary - new_distribution->buckets[i - 1].min_boundary + 1;
             new_max = new_distribution->buckets[i - 1].max_boundary + previous_bucket_size * factor;
             new_distribution->buckets[i] = initialize_bucket(new_distribution->buckets[i - 1].max_boundary + 1, new_max);
         }
