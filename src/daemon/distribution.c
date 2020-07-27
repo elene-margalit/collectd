@@ -27,7 +27,7 @@ static bucket_t initialize_bucket(double min_boundary, double max_boundary) {
 
 //create a new distribution_t with equally sized buckets
 distribution_t * distribution_new_linear(size_t num_buckets, double size) {
-    if((num_buckets <= 0) || (size <= 0)) {
+    if((num_buckets == 0) || (size <= 0)) {
         errno = EINVAL;
         return NULL;
     }
@@ -61,7 +61,7 @@ distribution_t * distribution_new_linear(size_t num_buckets, double size) {
 
 //create a new distribution_t with exponentially sized buckets
 distribution_t * distribution_new_exponential(size_t num_buckets, double initial_size, double factor) {
-    if((num_buckets <= 0) || (initial_size <= 0) || (factor <= 0)) {
+    if((num_buckets == 0) || (initial_size <= 0) || (factor < 1)) {
         errno = EINVAL;
         return NULL;
     }
@@ -105,7 +105,7 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
 distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buckets_sizes, size_t custom_buckets_arr_size) {
     
     //custom_buckets_arr_size must be num_buckets - 1 so that there is one bucket left for Infinity
-    if((num_buckets <= 0) || (custom_buckets_sizes == NULL) || (custom_buckets_arr_size != num_buckets - 1)) {
+    if((num_buckets == 0) || (custom_buckets_sizes == NULL) || (custom_buckets_arr_size != num_buckets - 1)) {
         errno = EINVAL;
         return NULL;
     }
