@@ -11,14 +11,14 @@ struct bucket_s{
 struct distribution_s {
      bucket_t *buckets;
      size_t num_buckets;
-     size_t total_scalar_count;
-     double raw_data_sum;
+     size_t total_scalar_count;  //count of all registered scalar metrics
+     double raw_data_sum;        //sum of all registered raw scalar metrics
 };
 
-//bucket constructor
-bucket_t initialize_bucket(double min_boundary, double max_boundary) {
+//private bucket constructor
+static bucket_t initialize_bucket(double min_boundary, double max_boundary) {
     bucket_t new_bucket = {
-        .bucket_counter = 0,
+        .bucket_counter = 0,        
         .min_boundary = min_boundary,
         .max_boundary = max_boundary,
     };
@@ -30,6 +30,7 @@ void increment(bucket_t *bucket) {
     bucket->bucket_counter++;
 } 
 
+//create a new distribution_t with equally sized buckets
 distribution_t * distribution_new_linear(size_t num_buckets, double size) {
     if(num_buckets <= 0 || size <= 0) {
         errno = EINVAL;
@@ -56,6 +57,7 @@ distribution_t * distribution_new_linear(size_t num_buckets, double size) {
     new_distribution->raw_data_sum = 0;
 }
 
+//create a new distribution_t with exponentially sized buckets
 distribution_t * distribution_new_exponential(size_t num_buckets, double initial_size, double factor) {
     if(num_buckets <= 0 || initial_size <= 0 || factor <= 0) {
         errno = EINVAL;
@@ -86,6 +88,7 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
     new_distribution->raw_data_sum = 0;
 }
 
+//create a new distribution_t with custom sized buckets, sizes provided in the custom_buckets_sizes array
 distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buckets_sizes, size_t custom_buckets_arr_size) {
     //custom_buckets_arr_size must be num_buckets - 1 so that there is one bucket left for Infinity
     if(num_buckets <= 0 || custom_buckets_sizes == NULL || custom_buckets_arr_size != num_buckets - 1) {
@@ -122,6 +125,7 @@ distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buck
     new_distribution->raw_data_sum = 0;
 }
 
+//update distributin_t with new incoming scalar metric, increment according bucket
 void distribution_update(distribution_t *dist, double gauge) {
     for(size_t i = 0; i < dist->num_buckets; i++) {
         if(gauge >= dist->buckets[i].min_boundary && gauge <= dist->buckets[i].max_boundary) {
@@ -130,11 +134,13 @@ void distribution_update(distribution_t *dist, double gauge) {
     }
 }
 
+//calculate average value of registered raw scalar metrics
 double distribution_average(distribution_t *dist) {
     return dist->raw_data_sum / dist->total_scalar_count;
 }
 
-int distribution_percentile(distribution_t *dist, uint8_t percent) {
+//calculate percentile, returns max_boundary of according bucket, for example 40% took less or equal to 3ms
+int distribution_percentile(distribution_t *dist, double percent) {
     int sum = 0;
     int bound = 0;
     double target_amount = (percent * 100) / dist->num_buckets;
@@ -148,6 +154,7 @@ int distribution_percentile(distribution_t *dist, uint8_t percent) {
     return bound;
 }
 
+//free memory
 void distribution_destroy(distribution_t *dist) {
     if(dist == NULL){
         return;
