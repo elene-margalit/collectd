@@ -134,6 +134,7 @@ int distribution_percentile(distribution_t *dist, uint8_t percent) {
         if(sum >= target_amount)
         {
             bound = dist->buckets[i].max_boundary;
+            break;
         }
     }
     return bound;
