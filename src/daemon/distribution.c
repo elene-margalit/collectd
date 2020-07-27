@@ -3,7 +3,7 @@
 #include "distribution.h"
 
 struct bucket_s{
-	size_t bucket_counter;
+	uint64_t bucket_counter;
 	double min_boundary;
 	double max_boundary;
 };
@@ -11,7 +11,7 @@ struct bucket_s{
 struct distribution_s {
      bucket_t *buckets;
      size_t num_buckets;
-     size_t total_scalar_count;  //count of all registered scalar metrics
+     uint64_t total_scalar_count;  //count of all registered scalar metrics
      double raw_data_sum;        //sum of all registered raw scalar metrics
 };
 
@@ -23,11 +23,6 @@ static bucket_t initialize_bucket(double min_boundary, double max_boundary) {
         .max_boundary = max_boundary,
     };
     return new_bucket;
-} 
-
-//increment bucket_counter of specific bucket
-void increment(bucket_t *bucket) { 
-    bucket->bucket_counter++;
 } 
 
 //create a new distribution_t with equally sized buckets
@@ -55,6 +50,7 @@ distribution_t * distribution_new_linear(size_t num_buckets, double size) {
     new_distribution->num_buckets = num_buckets;
     new_distribution->total_scalar_count = 0;
     new_distribution->raw_data_sum = 0;
+    return new_distribution;
 }
 
 //create a new distribution_t with exponentially sized buckets
@@ -86,6 +82,7 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
     new_distribution->num_buckets = num_buckets;
     new_distribution->total_scalar_count = 0;
     new_distribution->raw_data_sum = 0;
+    return new_distribution;
 }
 
 //create a new distribution_t with custom sized buckets, sizes provided in the custom_buckets_sizes array
@@ -123,6 +120,7 @@ distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buck
     new_distribution->num_buckets = num_buckets;
     new_distribution->total_scalar_count = 0;
     new_distribution->raw_data_sum = 0;
+    return new_distribution;
 }
 
 //update distributin_t with new incoming scalar metric, increment according bucket
@@ -132,6 +130,9 @@ void distribution_update(distribution_t *dist, double gauge) {
             dist->buckets[i].bucket_counter++;
         }
     }
+
+    dist->total_scalar_count++;
+    dist->raw_data_sum += gauge;
 }
 
 //calculate average value of registered raw scalar metrics
