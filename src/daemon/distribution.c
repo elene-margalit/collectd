@@ -65,7 +65,7 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
     double previous_bucket_size;
     double new_max;
 
-    for(int i = 0; i < num_buckets; i++){
+    for(size_t i = 0; i < num_buckets; i++){
         if(i == 0) {
             new_distribution->buckets[i] = initialize_bucket(0, initial_size);
         }
