@@ -45,14 +45,11 @@ distribution_t * distribution_new_linear(size_t num_buckets, double size) {
     }
 
    for(size_t i = 0; i < num_buckets; i++) {
-        if(i == 0) {
-            new_distribution->buckets[i] = initialize_bucket(0, size);
-        }
-        else if(i < num_buckets - 1) {
-            new_distribution->buckets[i] = initialize_bucket(i * size + 1, i*size + size);
+        if(i < num_buckets - 1) {
+            new_distribution->buckets[i] = initialize_bucket(i * size, i*size + size - 1);
         }
         else {
-            new_distribution->buckets[i] = initialize_bucket(new_distribution->buckets[i - 1].max_boundary + 1, INFINITY);
+            new_distribution->buckets[i] = initialize_bucket(i * size, INFINITY);
         }
     }
     
@@ -106,6 +103,7 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
 
 //create a new distribution_t with custom sized buckets, sizes provided in the custom_buckets_sizes array
 distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buckets_sizes, size_t custom_buckets_arr_size) {
+    
     //custom_buckets_arr_size must be num_buckets - 1 so that there is one bucket left for Infinity
     if((num_buckets <= 0) || (custom_buckets_sizes == NULL) || (custom_buckets_arr_size != num_buckets - 1)) {
         errno = EINVAL;
@@ -130,8 +128,6 @@ distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buck
         printf("Calloc failed.");
         exit(1);
     }
-
-    //handle case when calloc fails
 
     for(size_t i = 0; i < num_buckets; i++) {
         if(i == 0) {
