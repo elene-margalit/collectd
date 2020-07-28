@@ -1,3 +1,29 @@
+/**
+ * collectd - src/daemon/metric.c
+ * Copyright (C) 2019-2020  Google LLC
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ * Author:
+ *   Elene Margalitadze <elene.margalit at gmail.com>
+ **/
+
 #include <math.h>
 #include "collectd.h"
 #include "distribution.h"
@@ -98,15 +124,15 @@ distribution_t * distribution_new_exponential(size_t num_buckets, double initial
 }
 
 //create a new distribution_t with custom sized buckets, sizes provided in the custom_buckets_sizes array
-distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buckets_sizes, size_t custom_buckets_arr_size) {
+distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buckets_sizes, size_t arr_size) {
     
     //custom_buckets_arr_size must be num_buckets - 1 so that there is one bucket left for Infinity
-    if((num_buckets == 0) || (custom_buckets_sizes == NULL) || (custom_buckets_arr_size != num_buckets - 1)) {
+    if((num_buckets == 0) || (custom_buckets_sizes == NULL) || (arr_size != num_buckets - 1)) {
         errno = EINVAL;
         return NULL;
     }
 
-    for(size_t i = 0; i < custom_buckets_arr_size; i++) {
+    for(size_t i = 0; i < arr_size; i++) {
         if(custom_buckets_sizes[i] <= 0) {
             errno = EINVAL;
             return NULL;
