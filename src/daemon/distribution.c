@@ -173,22 +173,6 @@ distribution_t *distribution_new_custom(size_t num_boundaries,
   return new_distribution;
 }
 
-void distribution_update(distribution_t *dist, double gauge) {
-
-  size_t left = 0;
-  size_t right = dist->num_buckets - 1;
-  size_t index = binary_search(dist, left, right, gauge);
-  /*Linear update
-  for(size_t i = 0; i < dist->num_buckets; i++) {
-      if(gauge >= dist->buckets[i].min_boundary && gauge <=
-  dist->buckets[i].max_boundary) { dist->buckets[i].bucket_counter++;
-      }
-  }*/
-  dist->buckets[index].bucket_counter++;
-  dist->total_scalar_count++;
-  dist->raw_data_sum += gauge;
-}
-
 static size_t binary_search(distribution_t *dist, size_t left, size_t right,
                             double gauge) {
   if (left > right) {
@@ -206,6 +190,22 @@ static size_t binary_search(distribution_t *dist, size_t left, size_t right,
   }
 
   return binary_search(dist, mid, right, gauge);
+}
+
+void distribution_update(distribution_t *dist, double gauge) {
+
+  size_t left = 0;
+  size_t right = dist->num_buckets - 1;
+  size_t index = binary_search(dist, left, right, gauge);
+  /*Linear update
+  for(size_t i = 0; i < dist->num_buckets; i++) {
+      if(gauge >= dist->buckets[i].min_boundary && gauge <=
+  dist->buckets[i].max_boundary) { dist->buckets[i].bucket_counter++;
+      }
+  }*/
+  dist->buckets[index].bucket_counter++;
+  dist->total_scalar_count++;
+  dist->raw_data_sum += gauge;
 }
 
 double distribution_average(distribution_t *dist) {
