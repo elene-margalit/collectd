@@ -1,5 +1,5 @@
 /**
- * collectd - src/daemon/metric.c
+ * collectd - src/daemon/distribution.h
  * Copyright (C) 2019-2020  Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a

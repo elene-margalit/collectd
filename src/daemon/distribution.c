@@ -1,5 +1,5 @@
 /**
- * collectd - src/daemon/metric.c
+ * collectd - src/daemon/distribution.c
  * Copyright (C) 2019-2020  Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -151,11 +151,11 @@ distribution_t * distribution_new_custom(size_t num_buckets, double *custom_buck
 
     for(size_t i = 0; i < num_buckets; i++) {
         if(i == 0) {
-            new_distribution->buckets[i] = initialize_bucket(0, custom_buckets_sizes[0] - 1);
+            new_distribution->buckets[i] = initialize_bucket(0, custom_buckets_sizes[0]);
         }
         else if(i < num_buckets - 1) {
             double current_min = new_distribution->buckets[i - 1].max_boundary + 1;
-            double current_max = new_distribution->buckets[i - 1].max_boundary + custom_buckets_sizes[i];
+            double current_max = custom_buckets_sizes[i];
             new_distribution->buckets[i] = initialize_bucket(current_min, current_max);
         }
         else {
