@@ -231,7 +231,18 @@ double distribution_percentile(distribution_t *dist, double percent) {
   return bound;
 }
 
-distribution_t distribution_clone(distribution_t *dist) { return *dist; }
+distribution_t distribution_clone(distribution_t *dist) {
+  distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
+  if (new_distribution == NULL) {
+    // return 0;
+  }
+
+  new_distribution->num_buckets = dist->num_buckets;
+  new_distribution->buckets = dist->buckets;
+  new_distribution->total_scalar_count = dist->total_scalar_count;
+  new_distribution->raw_data_sum = dist->total_scalar_count;
+  return *new_distribution;
+}
 
 void distribution_destroy(distribution_t *dist) {
   if (dist == NULL) {
