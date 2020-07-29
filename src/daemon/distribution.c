@@ -236,9 +236,16 @@ distribution_t distribution_clone(distribution_t *dist) {
   if (new_distribution == NULL) {
     // return 0;
   }
-
   new_distribution->num_buckets = dist->num_buckets;
-  new_distribution->buckets = dist->buckets;
+  new_distribution->buckets = calloc(dist->num_buckets, sizeof(bucket_t));
+    if (new_distribution->buckets == NULL) {
+    // return 0;
+  }
+
+  for (size_t i = 0; i < new_distribution->num_buckets; i++) {
+    new_distribution->buckets[i] = initialize_bucket(dist->buckets[i].min_boundary, dist->buckets[i].max_boundary);
+    }
+  
   new_distribution->total_scalar_count = dist->total_scalar_count;
   new_distribution->raw_data_sum = dist->total_scalar_count;
   return *new_distribution;
