@@ -85,9 +85,9 @@ distribution_t *distribution_new_linear(size_t num_buckets, double size) {
 }
 
 distribution_t *distribution_new_exponential(size_t num_buckets,
-                                             double initial_size,
+                                             double base,
                                              double factor) {
-  if ((num_buckets == 0) || (initial_size <= 0) || (factor < 1)) {
+  if ((num_buckets == 0) || (base <= 0) || (factor <= 1)) {
     errno = EINVAL;
     return NULL;
   }
@@ -107,14 +107,14 @@ distribution_t *distribution_new_exponential(size_t num_buckets,
 
   for (size_t i = 0; i < num_buckets; i++) {
     if (i == 0) {
-      new_distribution->buckets[i] = initialize_bucket(0, initial_size);
+      new_distribution->buckets[i] = initialize_bucket(0, base);
     } else if (i < num_buckets - 1) {
-      previous_bucket_size = new_distribution->buckets[i - 1].max_boundary -
+      /*previous_bucket_size = new_distribution->buckets[i - 1].max_boundary -
                              new_distribution->buckets[i - 1].min_boundary + 1;
       new_max = new_distribution->buckets[i - 1].max_boundary +
-                previous_bucket_size * factor;
+                previous_bucket_size * factor;*/
       new_distribution->buckets[i] = initialize_bucket(
-          new_distribution->buckets[i - 1].max_boundary, new_max);
+          new_distribution->buckets[i - 1].max_boundary, base * pow(factor, i));
     } else {
       new_distribution->buckets[i] = initialize_bucket(
           new_distribution->buckets[i - 1].max_boundary, INFINITY);
@@ -127,15 +127,15 @@ distribution_t *distribution_new_exponential(size_t num_buckets,
   return new_distribution;
 }
 
-distribution_t *distribution_new_custom(size_t num_boundaries,
+distribution_t *distribution_new_custom(size_t num_bounds,
                                         double *custom_max_boundaries) {
 
-  if ((num_boundaries == 0) || (custom_max_boundaries == NULL)) {
+  if ((num_bounds == 0) || (custom_max_boundaries == NULL)) {
     errno = EINVAL;
     return NULL;
   }
 
-  for (size_t i = 1; i < num_boundaries; i++) {
+  for (size_t i = 1; i < num_bounds; i++) {
     if (custom_max_boundaries[i] <= custom_max_boundaries[i - 1]) {
       errno = EINVAL;
       return NULL;
@@ -144,7 +144,7 @@ distribution_t *distribution_new_custom(size_t num_boundaries,
 
   distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
   bucket_t *buckets =
-      calloc(num_boundaries + 1, sizeof(bucket_t)); //+1 for infinity bucket
+      calloc(num_bounds + 1, sizeof(bucket_t)); //+1 for infinity bucket
 
   if ((new_distribution == NULL) || (buckets == NULL)) {
     free(new_distribution);
@@ -153,11 +153,11 @@ distribution_t *distribution_new_custom(size_t num_boundaries,
   }
   new_distribution->buckets = buckets;
 
-  for (size_t i = 0; i < num_boundaries + 1; i++) {
+  for (size_t i = 0; i < num_bounds + 1; i++) {
     if (i == 0) {
       new_distribution->buckets[i] =
           initialize_bucket(0, custom_max_boundaries[0]);
-    } else if (i < num_boundaries) {
+    } else if (i < num_bounds) {
       new_distribution->buckets[i] =
           initialize_bucket(new_distribution->buckets[i - 1].max_boundary,
                             custom_max_boundaries[i]);
@@ -168,7 +168,7 @@ distribution_t *distribution_new_custom(size_t num_boundaries,
   }
 
   new_distribution->num_buckets =
-      num_boundaries + 1; // plus one for infinity bucket
+      num_bounds + 1; // plus one for infinity bucket
   new_distribution->total_scalar_count = 0;
   new_distribution->raw_data_sum = 0;
   return new_distribution;
