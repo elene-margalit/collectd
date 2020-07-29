@@ -46,22 +46,21 @@ NULL is returned.*/
 distribution_t *distribution_new_linear(size_t num_buckets, double size);
 
 /*Constructor function for creating buckets with exponentially sized ranges. The
-initial_size defines the size of the first bucket and each subsequent bucket has
-the size factor*(size of previous bucket). Error Handling: if num_buckets == 0
-or initial_size is <= 0 or factor < 1, errno is set to EINVAL and NULL is
+base defines the size of the first bucket and each subsequent bucket has
+the size base * pow(factor, i). Error Handling: if num_buckets == 0
+or base is <= 0 or factor < 1, errno is set to EINVAL and NULL is
 returned.*/
-distribution_t *distribution_new_exponential(size_t num_buckets,
-                                             double initial_size,
+distribution_t *distribution_new_exponential(size_t num_buckets, double base,
                                              double factor);
 
 /*Constructor function for creating buckets with custom sized ranges. The array
 custom_max_boundaries contains custom max_boundaries for each bucket and the
-num_boundaries represents the size of this array. The num_buckets attribute is
-set to max_boundaries + 1 in the function because we have to account for the
+num_bounds represents the size of this array. The num_buckets attribute is
+set to num_bounds + 1 in the function because we have to account for the
 bucket with max_boundary +Infinity. Error Handling: if num_boundaries == 0 or
 custom_max_boundaries == NULL or the array elements are not increasing,
 errno is set to EINVAL and NULL is returned.*/
-distribution_t *distribution_new_custom(size_t num_boundaries,
+distribution_t *distribution_new_custom(size_t num_bounds,
                                         double *custom_max_boundaries);
 
 /*Function for updating our distribution_t object when a new scalar metric gauge
@@ -87,7 +86,7 @@ snapshot for when we want to calculate a percentile or average. If we don't
 provide a cloned distribution_t as an argument to the percentile and average
 functions, the update function might overwrite the distribution_t object while
 calculating the percentile or average and that we would like to avoid.*/
-distribution_t distribution_clone(distribution_t *dist);
+distribution_t *distribution_clone(distribution_t *dist);
 
 /*Function for freeing the memory of a distribution_t object after we don't need
  * it anymore.*/

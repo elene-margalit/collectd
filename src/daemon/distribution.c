@@ -84,8 +84,7 @@ distribution_t *distribution_new_linear(size_t num_buckets, double size) {
   return new_distribution;
 }
 
-distribution_t *distribution_new_exponential(size_t num_buckets,
-                                             double base,
+distribution_t *distribution_new_exponential(size_t num_buckets, double base,
                                              double factor) {
   if ((num_buckets == 0) || (base <= 0) || (factor <= 1)) {
     errno = EINVAL;
