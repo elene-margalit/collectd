@@ -84,9 +84,10 @@ distribution_t *distribution_new_linear(size_t num_buckets, double size) {
   return new_distribution;
 }
 
-distribution_t *distribution_new_exponential(size_t num_buckets, double base,
+distribution_t *distribution_new_exponential(size_t num_buckets,
+                                             double base,
                                              double factor) {
-  if ((num_buckets == 0) || (base <= 0) || (factor <= 1)) {
+  if ((num_buckets == 0) || (base <= 1) || (factor <= 0)) {
     errno = EINVAL;
     return NULL;
   }
@@ -101,19 +102,16 @@ distribution_t *distribution_new_exponential(size_t num_buckets, double base,
   }
   new_distribution->buckets = buckets;
 
-  double previous_bucket_size;
-  double new_max;
-
   for (size_t i = 0; i < num_buckets; i++) {
+
     if (i == 0) {
       new_distribution->buckets[i] = initialize_bucket(0, base);
     } else if (i < num_buckets - 1) {
-      /*previous_bucket_size = new_distribution->buckets[i - 1].max_boundary -
-                             new_distribution->buckets[i - 1].min_boundary + 1;
-      new_max = new_distribution->buckets[i - 1].max_boundary +
-                previous_bucket_size * factor;*/
+      if(i >= 2) {
+        base *= base;  //So we don't have to do a pow(base, i) each time
+      }
       new_distribution->buckets[i] = initialize_bucket(
-          new_distribution->buckets[i - 1].max_boundary, base * pow(factor, i));
+          new_distribution->buckets[i - 1].max_boundary, factor * base);
     } else {
       new_distribution->buckets[i] = initialize_bucket(
           new_distribution->buckets[i - 1].max_boundary, INFINITY);
@@ -193,34 +191,36 @@ static size_t binary_search(distribution_t *dist, size_t left, size_t right,
 }
 
 void distribution_update(distribution_t *dist, double gauge) {
+  if ((dist == NULL) || (gauge <= 0)) {
+    errno = EINVAL;
+  }
 
   size_t left = 0;
   size_t right = dist->num_buckets - 1;
   size_t index = binary_search(dist, left, right, gauge);
-  /*Linear update
-  for(size_t i = 0; i < dist->num_buckets; i++) {
-      if(gauge >= dist->buckets[i].min_boundary && gauge <=
-  dist->buckets[i].max_boundary) { dist->buckets[i].bucket_counter++;
-      }
-  }*/
+
   dist->buckets[index].bucket_counter++;
   dist->total_scalar_count++;
   dist->raw_data_sum += gauge;
 }
 
 double distribution_average(distribution_t *dist) {
+  if (dist == NULL) {
+    errno = EINVAL;
+    return NAN;
+  }
   return dist->raw_data_sum / dist->total_scalar_count;
 }
 
 double distribution_percentile(distribution_t *dist, double percent) {
-  if ((percent < 0) || (percent > 100)) {
+  if ((percent < 0) || (percent > 100) || (dist == NULL)) {
     errno = EINVAL;
     return NAN;
   }
 
   int sum = 0;
   double bound = 0;
-  double target_amount = (percent * 100) / dist->num_buckets;
+  double target_amount = (percent / 100) * dist->total_scalar_count;
   for (size_t i = 0; i < dist->num_buckets; i++) {
     sum += dist->buckets[i].bucket_counter;
     if ((double)sum >= target_amount) {
@@ -231,7 +231,12 @@ double distribution_percentile(distribution_t *dist, double percent) {
   return bound;
 }
 
-distribution_t *distribution_clone(distribution_t *dist) {
+distribution_t * distribution_clone(distribution_t *dist) {
+  if (dist == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
+
   distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
   bucket_t *buckets = calloc(dist->num_buckets, sizeof(bucket_t));
 
@@ -243,10 +248,7 @@ distribution_t *distribution_clone(distribution_t *dist) {
   new_distribution->buckets = buckets;
   new_distribution->num_buckets = dist->num_buckets;
 
-  for (size_t i = 0; i < new_distribution->num_buckets; i++) {
-    new_distribution->buckets[i] = initialize_bucket(
-        dist->buckets[i].min_boundary, dist->buckets[i].max_boundary);
-  }
+  memcpy(new_distribution->buckets, dist->buckets, sizeof(bucket_t) * dist->num_buckets);
 
   new_distribution->total_scalar_count = dist->total_scalar_count;
   new_distribution->raw_data_sum = dist->total_scalar_count;
