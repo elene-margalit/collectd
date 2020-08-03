@@ -28,8 +28,11 @@
 
 /*Introduce data structure bucket_t with which we will count the occurrences of
 scalar metrics falling into specific ranges*/
-struct bucket_s;
-typedef struct bucket_s bucket_t;
+typedef struct {
+  uint64_t bucket_counter;
+  double min_boundary;
+  double max_boundary;
+} bucket_t;
 
 /*Introduce data structure distribution_t which will provide us with all
 neccessary functions and attributes to get insight into the distribution of
@@ -46,12 +49,12 @@ NULL is returned.*/
 distribution_t *distribution_new_linear(size_t num_buckets, double size);
 
 /*Constructor function for creating buckets with exponentially sized ranges. The
-base defines the size of the first bucket and each subsequent bucket has
-the size base * pow(factor, i). Error Handling: if num_buckets == 0
-or base is <= 0 or factor < 1, errno is set to EINVAL and NULL is
+factor defines the size of the first bucket and each subsequent bucket has
+the size factor * pow(base, i). Error Handling: if num_buckets == 0
+or base is <= 0 or factor <= 1, errno is set to EINVAL and NULL is
 returned.*/
-distribution_t *distribution_new_exponential(size_t num_buckets, double base,
-                                             double factor);
+distribution_t *distribution_new_exponential(size_t num_buckets, double factor,
+                                             double base);
 
 /*Constructor function for creating buckets with custom sized ranges. The array
 custom_max_boundaries contains custom max_boundaries for each bucket and the
@@ -67,27 +70,54 @@ distribution_t *distribution_new_custom(size_t num_bounds,
 is collected using binary search. The corresponding bucket counter is
 incremented, as is the total_scalar_count attribute of distribution_t. We also
 add the value of gauge to the
-attribute raw_data_sum which sums up all collected raw scalar metrics.*/
-void distribution_update(distribution_t *dist, double gauge);
+attribute raw_data_sum which sums up all collected raw scalar metrics.
+Error Handling: If dist == NULL or gauge <= 0, errno is set to EINVAL and -1 is
+returned, else return 0*/
+int distribution_update(distribution_t *dist, double gauge);
 
 /*Function for calculating the desired percentile. It returns the max_boundary
 of the corresponding bucket. For example, if we want to calculate the 40th
 percentile, the function will inform us that 40% of the collected scalar metrics
 fall under a specific max_boundarary.
-Error Handling: If percent is less than 0 or more than 100, the function returns
-NAN.*/
+Error Handling: if dist == NULL or percent is less than 0 or more than 100,
+errno is set to EINVAL and the function returns NAN.*/
 double distribution_percentile(distribution_t *dist, double percent);
 
-/*Returns the average of all collected raw scalar metrics.*/
+/*Returns the average of all collected raw scalar metrics.
+Error Handling: if dist == NULL, errno is set to EINVAL and
+NULL is returned.*/
 double distribution_average(distribution_t *dist);
 
 /*Create a clone of the argument distribution_t dist, which will represent a
 snapshot for when we want to calculate a percentile or average. If we don't
 provide a cloned distribution_t as an argument to the percentile and average
 functions, the update function might overwrite the distribution_t object while
-calculating the percentile or average and that we would like to avoid.*/
+calculating the percentile or average and that we would like to avoid.
+Error Handling: if dist == NULL, errno is set to EINVAL and
+NULL is returned.*/
 distribution_t *distribution_clone(distribution_t *dist);
 
 /*Function for freeing the memory of a distribution_t object after we don't need
- * it anymore.*/
+it anymore.
+Error Handling: if dist == NULL, errno is set to EINVAL*/
 void distribution_destroy(distribution_t *d);
+
+/*Getter function for getting the buckets.
+Error Handling: if dist == NULL, errno is set to EINVAL and
+NULL is returned.*/
+bucket_t *distribution_get_buckets(distribution_t *dist);
+
+/*Getter function for number of buckets
+Error Handling: if dist == NULL, errno is set to EINVAL and
+-1 is returned.*/
+int distribution_get_num_buckets(distribution_t *dist);
+
+/*Getter function for total count of all registered scalar metrics.
+Error Handling: if dist == NULL, errno is set to EINVAL and
+-1 is returned.*/
+int distribution_get_total_scalar_count(distribution_t *dist);
+
+/*Getter function for sum of all registered raw scalar metrics.
+Error Handling: if dist == NULL, errno is set to EINVAL and
+NAN is returned.*/
+double distribution_get_raw_data_sum(distribution_t *dist);

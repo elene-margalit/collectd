@@ -28,7 +28,6 @@
 #include "distribution.h"
 #include <math.h>
 
-
 struct distribution_s {
   bucket_t *buckets;
   size_t num_buckets;
@@ -102,8 +101,7 @@ distribution_t *distribution_new_exponential(size_t num_buckets, double factor,
       new_distribution->buckets[i] = initialize_bucket(0, factor);
     } else if (i < num_buckets - 1) {
       new_distribution->buckets[i] = initialize_bucket(
-          new_distribution->buckets[i - 1].max_boundary,
-          factor * pow(base, i));
+          new_distribution->buckets[i - 1].max_boundary, factor * pow(base, i));
     } else {
       new_distribution->buckets[i] = initialize_bucket(
           new_distribution->buckets[i - 1].max_boundary, INFINITY);
@@ -125,7 +123,8 @@ distribution_t *distribution_new_custom(size_t num_bounds,
   }
 
   for (size_t i = 1; i < num_bounds; i++) {
-    if ((custom_max_boundaries[i] <= custom_max_boundaries[i - 1]) || (custom_max_boundaries[i] == INFINITY)){
+    if ((custom_max_boundaries[i] <= custom_max_boundaries[i - 1]) ||
+        (custom_max_boundaries[i] == INFINITY)) {
       errno = EINVAL;
       return NULL;
     }
@@ -204,11 +203,10 @@ double distribution_average(distribution_t *dist) {
     return NAN;
   }
 
-  if (dist->total_scalar_count == 0)
-  {
+  if (dist->total_scalar_count == 0) {
     return NAN;
   }
-  
+
   return dist->raw_data_sum / dist->total_scalar_count;
 }
 
@@ -264,7 +262,7 @@ void distribution_destroy(distribution_t *dist) {
   free(dist);
 }
 
-bucket_t * distribution_get_buckets(distribution_t *dist) {
+bucket_t *distribution_get_buckets(distribution_t *dist) {
   if (dist == NULL) {
     errno = EINVAL;
     return NULL;
@@ -276,7 +274,7 @@ bucket_t * distribution_get_buckets(distribution_t *dist) {
     free(buckets);
     return NULL;
   }
-  
+
   memcpy(buckets, dist->buckets, sizeof(bucket_t) * dist->num_buckets);
   return buckets;
 }
