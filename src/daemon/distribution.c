@@ -28,11 +28,6 @@
 #include "distribution.h"
 #include <math.h>
 
-struct bucket_s {
-  uint64_t bucket_counter;
-  double min_boundary;
-  double max_boundary;
-};
 
 struct distribution_s {
   bucket_t *buckets;
@@ -84,10 +79,9 @@ distribution_t *distribution_new_linear(size_t num_buckets, double size) {
   return new_distribution;
 }
 
-distribution_t *distribution_new_exponential(size_t num_buckets,
-                                             double base,
-                                             double factor) {
-  if ((num_buckets == 0) || (base <= 1) || (factor <= 0)) {
+distribution_t *distribution_new_exponential(size_t num_buckets, double factor,
+                                             double base) {
+  if ((num_buckets == 0) || (factor <= 0) || (base <= 1)) {
     errno = EINVAL;
     return NULL;
   }
@@ -105,13 +99,11 @@ distribution_t *distribution_new_exponential(size_t num_buckets,
   for (size_t i = 0; i < num_buckets; i++) {
 
     if (i == 0) {
-      new_distribution->buckets[i] = initialize_bucket(0, base);
+      new_distribution->buckets[i] = initialize_bucket(0, factor);
     } else if (i < num_buckets - 1) {
-      if(i >= 2) {
-        base *= base;  //So we don't have to do a pow(base, i) each time
-      }
       new_distribution->buckets[i] = initialize_bucket(
-          new_distribution->buckets[i - 1].max_boundary, factor * base);
+          new_distribution->buckets[i - 1].max_boundary,
+          factor * pow(base, i));
     } else {
       new_distribution->buckets[i] = initialize_bucket(
           new_distribution->buckets[i - 1].max_boundary, INFINITY);
@@ -133,7 +125,7 @@ distribution_t *distribution_new_custom(size_t num_bounds,
   }
 
   for (size_t i = 1; i < num_bounds; i++) {
-    if (custom_max_boundaries[i] <= custom_max_boundaries[i - 1]) {
+    if ((custom_max_boundaries[i] <= custom_max_boundaries[i - 1]) || (custom_max_boundaries[i] == INFINITY)){
       errno = EINVAL;
       return NULL;
     }
@@ -184,15 +176,16 @@ static size_t binary_search(distribution_t *dist, size_t left, size_t right,
   }
 
   if (gauge < dist->buckets[mid].min_boundary) {
-    return binary_search(dist, left, mid, gauge);
+    return binary_search(dist, left, mid - 1, gauge);
   }
 
-  return binary_search(dist, mid, right, gauge);
+  return binary_search(dist, mid + 1, right, gauge);
 }
 
-void distribution_update(distribution_t *dist, double gauge) {
+int distribution_update(distribution_t *dist, double gauge) {
   if ((dist == NULL) || (gauge <= 0)) {
     errno = EINVAL;
+    return -1;
   }
 
   size_t left = 0;
@@ -202,6 +195,7 @@ void distribution_update(distribution_t *dist, double gauge) {
   dist->buckets[index].bucket_counter++;
   dist->total_scalar_count++;
   dist->raw_data_sum += gauge;
+  return 1;
 }
 
 double distribution_average(distribution_t *dist) {
@@ -209,6 +203,12 @@ double distribution_average(distribution_t *dist) {
     errno = EINVAL;
     return NAN;
   }
+
+  if (dist->total_scalar_count == 0)
+  {
+    return NAN;
+  }
+  
   return dist->raw_data_sum / dist->total_scalar_count;
 }
 
@@ -231,7 +231,7 @@ double distribution_percentile(distribution_t *dist, double percent) {
   return bound;
 }
 
-distribution_t * distribution_clone(distribution_t *dist) {
+distribution_t *distribution_clone(distribution_t *dist) {
   if (dist == NULL) {
     errno = EINVAL;
     return NULL;
@@ -248,10 +248,11 @@ distribution_t * distribution_clone(distribution_t *dist) {
   new_distribution->buckets = buckets;
   new_distribution->num_buckets = dist->num_buckets;
 
-  memcpy(new_distribution->buckets, dist->buckets, sizeof(bucket_t) * dist->num_buckets);
+  memcpy(new_distribution->buckets, dist->buckets,
+         sizeof(bucket_t) * dist->num_buckets);
 
   new_distribution->total_scalar_count = dist->total_scalar_count;
-  new_distribution->raw_data_sum = dist->total_scalar_count;
+  new_distribution->raw_data_sum = dist->raw_data_sum;
   return new_distribution;
 }
 
@@ -261,4 +262,46 @@ void distribution_destroy(distribution_t *dist) {
   }
   free(dist->buckets);
   free(dist);
+}
+
+bucket_t * distribution_get_buckets(distribution_t *dist) {
+  if (dist == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
+
+  bucket_t *buckets = calloc(dist->num_buckets, sizeof(bucket_t));
+
+  if (buckets == NULL) {
+    free(buckets);
+    return NULL;
+  }
+  
+  memcpy(buckets, dist->buckets, sizeof(bucket_t) * dist->num_buckets);
+  return buckets;
+}
+
+int distribution_get_num_buckets(distribution_t *dist) {
+  if (dist == NULL) {
+    errno = EINVAL;
+    return -1;
+  }
+
+  return dist->num_buckets;
+}
+
+int distribution_get_total_scalar_count(distribution_t *dist) {
+  if (dist == NULL) {
+    errno = EINVAL;
+    return -1;
+  }
+  return dist->total_scalar_count;
+}
+
+double distribution_get_raw_data_sum(distribution_t *dist) {
+  if (dist == NULL) {
+    errno = EINVAL;
+    return NAN;
+  }
+  return dist->raw_data_sum;
 }
