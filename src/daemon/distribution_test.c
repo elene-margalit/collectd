@@ -45,29 +45,19 @@ static double *initialize_linear_max_bounds(size_t num_buckets, double size) {
 }
 
 static double *initialize_exponential_min_bounds(size_t num_buckets,
-                                                 double start, double factor) {
+                                                 double factor, double base) {
   double *arr = malloc(num_buckets * sizeof(double));
   for (size_t i = 0; i < num_buckets; i++) {
-    if (i == 0) {
-      arr[i] = 0;
-    } else {
-      arr[i] = start;
-      start *= factor;
-    }
+    arr[i] = i == 0 ? 0 : factor * pow(base, i - 1);
   }
   return arr;
 }
 
 static double *initialize_exponential_max_bounds(size_t num_buckets,
-                                                 double start, double factor) {
+                                                 double factor, double base) {
   double *arr = malloc(num_buckets * sizeof(double));
   for (size_t i = 0; i < num_buckets; i++) {
-    if (i == num_buckets - 1) {
-      arr[i] = INFINITY;
-    } else {
-      arr[i] = start;
-      start *= factor;
-    }
+    arr[i] = i == num_buckets - 1 ? INFINITY : factor * pow(base, i);
   }
   return arr;
 }
@@ -96,7 +86,7 @@ DEF_TEST(distribution_new_linear) {
     double size;
     int want_err;
     size_t want_get_num_buckets;
-    int want_get_total_scalar_count;
+    uint64_t want_get_total_scalar_count;
     double want_get_raw_data_sum;
     double *want_get_min_bounds;
     double *want_get_max_bounds;
@@ -158,8 +148,8 @@ DEF_TEST(distribution_new_linear) {
     CHECK_NOT_NULL(
         dist = distribution_new_linear(cases[i].num_buckets, cases[i].size));
     EXPECT_EQ_INT(cases[i].want_get_num_buckets, dist->num_buckets);
-    EXPECT_EQ_INT(cases[i].want_get_total_scalar_count,
-                  dist->total_scalar_count);
+    EXPECT_EQ_UINT64(cases[i].want_get_total_scalar_count,
+                     dist->total_scalar_count);
     EXPECT_EQ_DOUBLE(cases[i].want_get_raw_data_sum, dist->raw_data_sum);
 
     for (size_t j = 0; j < dist->num_buckets; j++) {
@@ -173,7 +163,7 @@ DEF_TEST(distribution_new_linear) {
     }
     distribution_destroy(dist);
     free(cases[i].want_get_max_bounds);
-    // free(cases[i].want_get_min_bounds);
+    free(cases[i].want_get_min_bounds);
   }
   return 0;
 }
@@ -185,7 +175,7 @@ DEF_TEST(distribution_new_exponential) {
     double factor;
     int want_err;
     size_t want_get_num_buckets;
-    int want_get_total_scalar_count;
+    uint64_t want_get_total_scalar_count;
     double want_get_raw_data_sum;
     double *want_get_min_bounds;
     double *want_get_max_bounds;
@@ -262,8 +252,8 @@ DEF_TEST(distribution_new_exponential) {
     CHECK_NOT_NULL(dist = distribution_new_exponential(
                        cases[i].num_buckets, cases[i].start, cases[i].factor));
     EXPECT_EQ_INT(cases[i].want_get_num_buckets, dist->num_buckets);
-    EXPECT_EQ_INT(cases[i].want_get_total_scalar_count,
-                  dist->total_scalar_count);
+    EXPECT_EQ_UINT64(cases[i].want_get_total_scalar_count,
+                     dist->total_scalar_count);
     EXPECT_EQ_DOUBLE(cases[i].want_get_raw_data_sum, dist->raw_data_sum);
 
     for (size_t j = 0; j < dist->num_buckets; j++) {
@@ -288,7 +278,7 @@ DEF_TEST(distribution_new_custom) {
     double *custom_max_boundaries;
     int want_err;
     size_t want_get_num_buckets;
-    int want_get_total_scalar_count;
+    uint64_t want_get_total_scalar_count;
     double want_get_raw_data_sum;
     double *want_get_min_bounds;
     double *want_get_max_bounds;
@@ -355,8 +345,8 @@ DEF_TEST(distribution_new_custom) {
     CHECK_NOT_NULL(dist = distribution_new_custom(
                        cases[i].num_bounds, cases[i].custom_max_boundaries));
     EXPECT_EQ_INT(cases[i].want_get_num_buckets, dist->num_buckets);
-    EXPECT_EQ_INT(cases[i].want_get_total_scalar_count,
-                  dist->total_scalar_count);
+    EXPECT_EQ_UINT64(cases[i].want_get_total_scalar_count,
+                     dist->total_scalar_count);
     EXPECT_EQ_DOUBLE(cases[i].want_get_raw_data_sum, dist->raw_data_sum);
 
     for (size_t j = 0; j < dist->num_buckets; j++) {
@@ -378,13 +368,13 @@ DEF_TEST(distribution_new_custom) {
 
 DEF_TEST(distribution_update) {
   struct {
-    double gauge;
     size_t num_buckets;
     double size;
     int want_err;
     size_t want_get_num_buckets;
-    int want_get_total_scalar_count;
+    uint64_t want_get_total_scalar_count;
     double want_get_raw_data_sum;
+    double gauge;
     size_t want_index;
   } cases[] = {
       {
@@ -430,6 +420,7 @@ DEF_TEST(distribution_update) {
     distribution_t *dist;
     CHECK_NOT_NULL(
         dist = distribution_new_linear(cases[i].num_buckets, cases[i].size));
+
     if (cases[i].want_err != 0) {
       EXPECT_EQ_INT(cases[i].want_err, errno);
       EXPECT_EQ_INT(-1, distribution_update(dist, cases[i].gauge));
@@ -445,8 +436,8 @@ DEF_TEST(distribution_update) {
     }
     EXPECT_EQ_INT(5, dist->buckets[cases[i].want_index].bucket_counter);
     EXPECT_EQ_INT(cases[i].want_get_num_buckets, dist->num_buckets);
-    EXPECT_EQ_INT(cases[i].want_get_total_scalar_count,
-                  dist->total_scalar_count);
+    EXPECT_EQ_UINT64(cases[i].want_get_total_scalar_count,
+                     dist->total_scalar_count);
     EXPECT_EQ_DOUBLE(cases[i].want_get_raw_data_sum, dist->raw_data_sum);
     distribution_destroy(dist);
   }
@@ -491,6 +482,12 @@ DEF_TEST(distribution_percentile) {
           .percent = 25,
           .want_get_result_bound = 120,
       },
+      {
+          .num_buckets = 15,
+          .size = 20,
+          .percent = 100.5,
+          .want_err = EINVAL,
+      },
   };
 
   for (size_t i = 0; i < (sizeof(cases) / sizeof(cases[0])); i++) {
@@ -498,6 +495,13 @@ DEF_TEST(distribution_percentile) {
 
     distribution_t *dist =
         distribution_new_linear(cases[i].num_buckets, cases[i].size);
+
+    if (cases[i].want_err != 0) {
+      EXPECT_EQ_DOUBLE(NAN, distribution_percentile(dist, cases[i].percent));
+      EXPECT_EQ_INT(cases[i].want_err, errno);
+      continue;
+    }
+
     dist->total_scalar_count = cases[i].total_scalar_count;
     for (size_t j = 0; j < dist->num_buckets; j++) {
       dist->buckets[j].bucket_counter = cases[i].bucket_counters[j];
