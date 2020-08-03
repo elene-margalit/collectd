@@ -194,7 +194,7 @@ int distribution_update(distribution_t *dist, double gauge) {
   dist->buckets[index].bucket_counter++;
   dist->total_scalar_count++;
   dist->raw_data_sum += gauge;
-  return 1;
+  return 0;
 }
 
 double distribution_average(distribution_t *dist) {
