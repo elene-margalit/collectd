@@ -132,6 +132,7 @@ noinst_LTLIBRARIES = \
 	libcmds.la \
 	libcommon.la \
 	libformat_graphite.la \
+	libdistribution.la \
 	libformat_json.la \
 	libheap.la \
 	libignorelist.la \
@@ -151,6 +152,7 @@ check_LTLIBRARIES = \
 
 check_PROGRAMS = \
 	test_common \
+	test_distribution \
 	test_format_graphite \
 	test_meta_data \
 	test_metric \
@@ -199,7 +201,7 @@ if BUILD_WIN32
 AM_CPPFLAGS += -DNOGDI
 endif
 
-COMMON_DEPS =
+COMMON_DEPS = 
 if BUILD_WIN32
 COMMON_DEPS += collectd.exe
 endif
@@ -268,6 +270,7 @@ collectd_LDFLAGS = -export-dynamic
 collectd_LDADD = \
 	libavltree.la \
 	libcommon.la \
+	libdistribution.la \
 	libheap.la \
 	libllist.la \
 	libmetric.la \
@@ -361,6 +364,11 @@ test_metric_SOURCES = \
 	src/testing.h
 test_metric_LDADD = libmetric.la libplugin_mock.la
 
+test_distribution_SOURCES = \
+	src/daemon/distribution_test.c \
+	src/testing.h
+test_distribution_LDADD = libmetric.la libplugin_mock.la
+
 test_utils_avltree_SOURCES = \
 	src/utils/avltree/avltree_test.c \
 	src/testing.h
@@ -425,10 +433,14 @@ libmetadata_la_SOURCES = \
 	src/utils/metadata/meta_data.c \
 	src/utils/metadata/meta_data.h
 
+
+
 libmetric_la_SOURCES = \
+			   src/daemon/distribution.c \
+			   src/daemon/distribution.h \
 		       src/daemon/metric.c \
 		       src/daemon/metric.h
-libmetric_la_LIBADD = libmetadata.la $(COMMON_LIBS)
+libmetric_la_LIBADD = libmetadata.la -lm $(COMMON_LIBS)
 
 libplugin_mock_la_SOURCES = \
 	src/daemon/plugin_mock.c \
