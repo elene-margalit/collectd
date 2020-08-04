@@ -123,7 +123,8 @@ sbin_PROGRAMS = \
 bin_PROGRAMS = \
 	collectd-nagios \
 	collectd-tg \
-	collectdctl
+	collectdctl \
+	distribution_benchmark
 endif # BUILD_WIN32
 
 
@@ -132,7 +133,6 @@ noinst_LTLIBRARIES = \
 	libcmds.la \
 	libcommon.la \
 	libformat_graphite.la \
-	libdistribution.la \
 	libformat_json.la \
 	libheap.la \
 	libignorelist.la \
@@ -270,7 +270,6 @@ collectd_LDFLAGS = -export-dynamic
 collectd_LDADD = \
 	libavltree.la \
 	libcommon.la \
-	libdistribution.la \
 	libheap.la \
 	libllist.la \
 	libmetric.la \
@@ -369,6 +368,13 @@ test_distribution_SOURCES = \
 	src/testing.h
 test_distribution_LDADD = libmetric.la libplugin_mock.la
 
+distribution_benchmark_SOURCES = src/daemon/distribution_benchmark.c
+#distribution_benchmark_CPPFLAGS = $(AM_CPPFLAGS) \
+#	-I$(srcdir)/src/libcollectdclient \
+#	-I$(top_builddir)/src/libcollectdclient
+distribution_benchmark_LDADD = \
+	libmetric.la
+
 test_utils_avltree_SOURCES = \
 	src/utils/avltree/avltree_test.c \
 	src/testing.h
@@ -441,6 +447,8 @@ libmetric_la_SOURCES = \
 		       src/daemon/metric.c \
 		       src/daemon/metric.h
 libmetric_la_LIBADD = libmetadata.la -lm $(COMMON_LIBS)
+
+
 
 libplugin_mock_la_SOURCES = \
 	src/daemon/plugin_mock.c \
