@@ -659,11 +659,13 @@ DEF_TEST(distribution_get_buckets) {
     distribution_t *dist =
         distribution_new_linear(cases[i].num_buckets, cases[i].size);
 
+    bucket_t *buckets;
+    CHECK_NOT_NULL(buckets = distribution_get_buckets(dist));
     EXPECT_EQ_INT(dist->num_buckets, distribution_get_num_buckets(dist));
     for (size_t j = 0; j < cases[i].num_buckets; j++) {
-      EXPECT_EQ_INT(dist->buckets[j].bucket_counter,
-                    distribution_get_buckets(dist)[j].bucket_counter);
+      EXPECT_EQ_INT(dist->buckets[j].bucket_counter, buckets[j].bucket_counter);
     }
+    free(buckets);
     distribution_destroy(dist);
   }
   return 0;
