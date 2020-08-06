@@ -183,10 +183,15 @@ static size_t binary_search(distribution_t *dist, size_t left, size_t right,
 
 int distribution_update(distribution_t *dist, double gauge) {
   if ((dist == NULL) || (gauge <= 0)) {
-    errno = EINVAL;
-    return -1;
+    return EINVAL;
   }
-
+  /*
+  for(size_t i = 0; i < dist->num_buckets; i++) {
+    if(gauge >= dist->buckets[i].min_boundary && gauge <
+  dist->buckets[i].max_boundary) { dist->buckets[i].bucket_counter++;
+    }
+  }
+  */
   size_t left = 0;
   size_t right = dist->num_buckets - 1;
   size_t index = binary_search(dist, left, right, gauge);
@@ -236,18 +241,13 @@ distribution_t *distribution_clone(distribution_t *dist) {
   }
 
   distribution_t *new_distribution = calloc(1, sizeof(distribution_t));
-  bucket_t *buckets = calloc(dist->num_buckets, sizeof(bucket_t));
 
-  if ((new_distribution == NULL) || (buckets == NULL)) {
+  if (new_distribution == NULL) {
     free(new_distribution);
-    free(buckets);
     return NULL;
   }
-  new_distribution->buckets = buckets;
+  new_distribution->buckets = distribution_get_buckets(dist);
   new_distribution->num_buckets = dist->num_buckets;
-
-  memcpy(new_distribution->buckets, dist->buckets,
-         sizeof(bucket_t) * dist->num_buckets);
 
   new_distribution->total_scalar_count = dist->total_scalar_count;
   new_distribution->raw_data_sum = dist->raw_data_sum;
@@ -288,7 +288,7 @@ int distribution_get_num_buckets(distribution_t *dist) {
   return dist->num_buckets;
 }
 
-int distribution_get_total_scalar_count(distribution_t *dist) {
+uint64_t distribution_get_total_scalar_count(distribution_t *dist) {
   if (dist == NULL) {
     errno = EINVAL;
     return -1;

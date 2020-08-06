@@ -485,6 +485,24 @@ DEF_TEST(distribution_percentile) {
       {
           .num_buckets = 15,
           .size = 20,
+          .total_scalar_count = 151,
+          .bucket_counters =
+              (uint64_t[]){0, 0, 2, 3, 9, 15, 57, 34, 14, 8, 5, 4, 0, 0, 0},
+          .percent = 0,
+          .want_get_result_bound = 20,
+      },
+      {
+          .num_buckets = 15,
+          .size = 20,
+          .total_scalar_count = 187,
+          .bucket_counters =
+              (uint64_t[]){0, 0, 2, 3, 45, 70, 30, 22, 14, 1, 0, 0, 0, 0, 0},
+          .percent = 100,
+          .want_get_result_bound = 200,
+      },
+      {
+          .num_buckets = 15,
+          .size = 20,
           .percent = 100.5,
           .want_err = EINVAL,
       },
@@ -665,6 +683,7 @@ DEF_TEST(distribution_get_buckets) {
     for (size_t j = 0; j < cases[i].num_buckets; j++) {
       EXPECT_EQ_INT(dist->buckets[j].bucket_counter, buckets[j].bucket_counter);
     }
+
     free(buckets);
     distribution_destroy(dist);
   }
