@@ -27,12 +27,14 @@
 #include "collectd.h"
 #include "distribution.h"
 #include <math.h>
+#include <pthread.h>
 
 struct distribution_s {
   bucket_t *buckets;
   size_t num_buckets;
   uint64_t total_scalar_count; // count of all registered scalar metrics
   double raw_data_sum;         // sum of all registered raw scalar metrics
+  pthread_mutex_t mutex;
 };
 
 /*Private bucket constructor, min_boundary is inclusive, max_boundary is
@@ -70,11 +72,15 @@ distribution_t *distribution_new_linear(size_t num_buckets, double size) {
     } else {
       new_distribution->buckets[i] = initialize_bucket(i * size, INFINITY);
     }
+    double min_boundary = i * size;
+    double max_boundary = (i == num_buckets - 1) ? INFINITY : i * size + size;
+    new_distribution->buckets[i] = initialize_bucket(min_boundary, max_boundary);
   }
 
   new_distribution->num_buckets = num_buckets;
   new_distribution->total_scalar_count = 0;
   new_distribution->raw_data_sum = 0;
+  pthread_mutex_init(&new_distribution->mutex, NULL);
   return new_distribution;
 }
 
@@ -96,21 +102,15 @@ distribution_t *distribution_new_exponential(size_t num_buckets, double factor,
   new_distribution->buckets = buckets;
 
   for (size_t i = 0; i < num_buckets; i++) {
-
-    if (i == 0) {
-      new_distribution->buckets[i] = initialize_bucket(0, factor);
-    } else if (i < num_buckets - 1) {
-      new_distribution->buckets[i] = initialize_bucket(
-          new_distribution->buckets[i - 1].max_boundary, factor * pow(base, i));
-    } else {
-      new_distribution->buckets[i] = initialize_bucket(
-          new_distribution->buckets[i - 1].max_boundary, INFINITY);
-    }
+    double min_boundary = (i == 0) ? 0 : new_distribution->buckets[i - 1].max_boundary;
+    double max_boundary = (i == num_buckets - 1) ? INFINITY : factor * pow(base, i);
+    new_distribution->buckets[i] = initialize_bucket(min_boundary, max_boundary);
   }
 
   new_distribution->num_buckets = num_buckets;
   new_distribution->total_scalar_count = 0;
   new_distribution->raw_data_sum = 0;
+  pthread_mutex_init(&new_distribution->mutex, NULL);
   return new_distribution;
 }
 
@@ -142,27 +142,20 @@ distribution_t *distribution_new_custom(size_t num_bounds,
   new_distribution->buckets = buckets;
 
   for (size_t i = 0; i < num_bounds + 1; i++) {
-    if (i == 0) {
-      new_distribution->buckets[i] =
-          initialize_bucket(0, custom_max_boundaries[0]);
-    } else if (i < num_bounds) {
-      new_distribution->buckets[i] =
-          initialize_bucket(new_distribution->buckets[i - 1].max_boundary,
-                            custom_max_boundaries[i]);
-    } else {
-      new_distribution->buckets[i] = initialize_bucket(
-          new_distribution->buckets[i - 1].max_boundary, INFINITY);
-    }
+    double min_boundary = (i == 0) ? 0 : new_distribution->buckets[i - 1].max_boundary;
+    double max_boundary = (i == num_bounds) ? INFINITY : custom_max_boundaries[i];
+    new_distribution->buckets[i] = initialize_bucket(min_boundary, max_boundary);
   }
 
   new_distribution->num_buckets =
       num_bounds + 1; // plus one for infinity bucket
   new_distribution->total_scalar_count = 0;
   new_distribution->raw_data_sum = 0;
+  pthread_mutex_init(&new_distribution->mutex, NULL);
   return new_distribution;
 }
 
-static size_t binary_search(distribution_t *dist, size_t left, size_t right,
+static int find_bucket(distribution_t *dist, size_t left, size_t right,
                             double gauge) {
   if (left > right) {
     return -1;
@@ -175,10 +168,10 @@ static size_t binary_search(distribution_t *dist, size_t left, size_t right,
   }
 
   if (gauge < dist->buckets[mid].min_boundary) {
-    return binary_search(dist, left, mid - 1, gauge);
+    return find_bucket(dist, left, mid - 1, gauge);
   }
 
-  return binary_search(dist, mid + 1, right, gauge);
+  return find_bucket(dist, mid + 1, right, gauge);
 }
 
 int distribution_update(distribution_t *dist, double gauge) {
@@ -193,12 +186,14 @@ int distribution_update(distribution_t *dist, double gauge) {
   }
   */
   size_t left = 0;
+  pthread_mutex_lock(&dist->mutex);
   size_t right = dist->num_buckets - 1;
-  size_t index = binary_search(dist, left, right, gauge);
+  size_t index = find_bucket(dist, left, right, gauge);
 
   dist->buckets[index].bucket_counter++;
   dist->total_scalar_count++;
   dist->raw_data_sum += gauge;
+  pthread_mutex_lock(&dist->mutex);
   return 0;
 }
 
@@ -208,11 +203,14 @@ double distribution_average(distribution_t *dist) {
     return NAN;
   }
 
+  pthread_mutex_lock(&dist->mutex);
+
   if (dist->total_scalar_count == 0) {
     return NAN;
   }
-
-  return dist->raw_data_sum / dist->total_scalar_count;
+  double average = dist->raw_data_sum / (double) dist->total_scalar_count;
+  pthread_mutex_unlock(&dist->mutex);
+  return average;
 }
 
 double distribution_percentile(distribution_t *dist, double percent) {
@@ -220,10 +218,10 @@ double distribution_percentile(distribution_t *dist, double percent) {
     errno = EINVAL;
     return NAN;
   }
-
   int sum = 0;
   double bound = 0;
-  double target_amount = (percent / 100) * dist->total_scalar_count;
+  pthread_mutex_lock(&dist->mutex);
+  double target_amount = (percent / 100) * (double) dist->total_scalar_count;
   for (size_t i = 0; i < dist->num_buckets; i++) {
     sum += dist->buckets[i].bucket_counter;
     if ((double)sum >= target_amount) {
@@ -231,6 +229,7 @@ double distribution_percentile(distribution_t *dist, double percent) {
       break;
     }
   }
+  pthread_mutex_unlock(&dist->mutex);
   return bound;
 }
 
@@ -246,11 +245,14 @@ distribution_t *distribution_clone(distribution_t *dist) {
     free(new_distribution);
     return NULL;
   }
+  pthread_mutex_lock(&dist->mutex);
   new_distribution->buckets = distribution_get_buckets(dist);
   new_distribution->num_buckets = dist->num_buckets;
 
   new_distribution->total_scalar_count = dist->total_scalar_count;
   new_distribution->raw_data_sum = dist->raw_data_sum;
+  pthread_mutex_init(&new_distribution->mutex, NULL);
+  pthread_mutex_unlock(&dist->mutex);
   return new_distribution;
 }
 
@@ -274,8 +276,9 @@ bucket_t *distribution_get_buckets(distribution_t *dist) {
     free(buckets);
     return NULL;
   }
-
+  pthread_mutex_lock(&dist->mutex);
   memcpy(buckets, dist->buckets, sizeof(bucket_t) * dist->num_buckets);
+  pthread_mutex_unlock(&dist->mutex);
   return buckets;
 }
 
@@ -288,7 +291,7 @@ int distribution_get_num_buckets(distribution_t *dist) {
   return dist->num_buckets;
 }
 
-uint64_t distribution_get_total_scalar_count(distribution_t *dist) {
+int distribution_get_total_scalar_count(distribution_t *dist) {
   if (dist == NULL) {
     errno = EINVAL;
     return -1;

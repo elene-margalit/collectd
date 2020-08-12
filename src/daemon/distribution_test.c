@@ -26,10 +26,15 @@
 
 #include "../testing.h"
 #include "collectd.h"
+#include <math.h>
 #include "distribution.c"
 
 static double *initialize_linear_min_bounds(size_t num_buckets, double size) {
   double *arr = malloc(num_buckets * sizeof(double));
+  if (arr == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
   for (size_t i = 0; i < num_buckets; i++) {
     arr[i] = i * size;
   }
@@ -38,6 +43,10 @@ static double *initialize_linear_min_bounds(size_t num_buckets, double size) {
 
 static double *initialize_linear_max_bounds(size_t num_buckets, double size) {
   double *arr = malloc(num_buckets * sizeof(double));
+  if (arr == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
   for (size_t i = 0; i < num_buckets; i++) {
     arr[i] = i == num_buckets - 1 ? INFINITY : i * size + size;
   }
@@ -47,6 +56,10 @@ static double *initialize_linear_max_bounds(size_t num_buckets, double size) {
 static double *initialize_exponential_min_bounds(size_t num_buckets,
                                                  double factor, double base) {
   double *arr = malloc(num_buckets * sizeof(double));
+  if (arr == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
   for (size_t i = 0; i < num_buckets; i++) {
     arr[i] = i == 0 ? 0 : factor * pow(base, i - 1);
   }
@@ -56,6 +69,10 @@ static double *initialize_exponential_min_bounds(size_t num_buckets,
 static double *initialize_exponential_max_bounds(size_t num_buckets,
                                                  double factor, double base) {
   double *arr = malloc(num_buckets * sizeof(double));
+  if (arr == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
   for (size_t i = 0; i < num_buckets; i++) {
     arr[i] = i == num_buckets - 1 ? INFINITY : factor * pow(base, i);
   }
@@ -65,6 +82,10 @@ static double *initialize_exponential_max_bounds(size_t num_buckets,
 static double *initialize_custom_min_bounds(size_t num_buckets,
                                             double *custom_max_boundaries) {
   double *arr = malloc(num_buckets * sizeof(double));
+  if (arr == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
   for (size_t i = 0; i < num_buckets; i++) {
     arr[i] = i == 0 ? 0 : custom_max_boundaries[i - 1];
   }
@@ -74,6 +95,10 @@ static double *initialize_custom_min_bounds(size_t num_buckets,
 static double *initialize_custom_max_bounds(size_t num_buckets,
                                             double *custom_max_boundaries) {
   double *arr = malloc(num_buckets * sizeof(double));
+  if (arr == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
   for (size_t i = 0; i < num_buckets; i++) {
     arr[i] = i == num_buckets - 1 ? INFINITY : custom_max_boundaries[i];
   }
