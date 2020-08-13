@@ -161,7 +161,7 @@ static int find_bucket(distribution_t *dist, size_t left, size_t right,
     return -1;
   }
 
-  size_t mid = left + (right - left) / 2;
+  int mid = left + (right - left) / 2;
   if (gauge >= dist->buckets[mid].min_boundary &&
       gauge < dist->buckets[mid].max_boundary) {
     return mid;
@@ -186,14 +186,14 @@ int distribution_update(distribution_t *dist, double gauge) {
   }
   */
   size_t left = 0;
-  pthread_mutex_lock(&dist->mutex);
+  //pthread_mutex_lock(&dist->mutex);
   size_t right = dist->num_buckets - 1;
-  size_t index = find_bucket(dist, left, right, gauge);
+  int index = find_bucket(dist, left, right, gauge);
 
   dist->buckets[index].bucket_counter++;
   dist->total_scalar_count++;
   dist->raw_data_sum += gauge;
-  pthread_mutex_lock(&dist->mutex);
+  //pthread_mutex_lock(&dist->mutex);
   return 0;
 }
 
